@@ -58,7 +58,6 @@ def transcribe_audio_file(s3_bucket, s3_key):
     except Exception as e:
         print(f"Error in transcription: {str(e)}")
         return None
-
 # ===================== Event Handler =====================
 class MyEventHandler(TranscriptResultStreamHandler):
     async def handle_transcript_event(self, transcript_event: TranscriptEvent):
@@ -119,3 +118,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         print("\nTranscription stopped.")
+
