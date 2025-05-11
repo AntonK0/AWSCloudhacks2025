@@ -1,0 +1,14 @@
+{
+  "resourceName": "TranscriptStorage",
+  "policyUUID": "514f4105",
+  "bucketName": "awscloudhacks20254778a1e2a74d463fac056f01856fbc",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "triggerFunction": "NONE",
+  "groupAccess": {}
+}
