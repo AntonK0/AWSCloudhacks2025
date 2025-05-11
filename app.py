@@ -14,6 +14,7 @@ S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'awscloudhacks20254778a1e2a74d
 S3_BUCKET_REGION = os.environ.get('S3_BUCKET_REGION', 'us-west-2') # e.g., 'us-west-2'
 S3_RESUMES_PREFIX = 'resumes/'
 S3_JD_PREFIX = 'job_descriptions/'
+S3_AUDIO_PREFIX = 'audio_responses/'  # New prefix for audio files
 
 
 # Initialize S3 client
@@ -100,6 +101,58 @@ def upload_file_to_s3():
     
     return jsonify({'error': 'File upload failed for an unknown reason.'}), 500
 
+@app.route('/api/upload-audio', methods=['POST'])
+def upload_audio_to_s3():
+    """
+    Handles audio file uploads and stores them in S3.
+    Expects 'audio' in the form data as a blob.
+    """
+    if s3_client is None:
+        return jsonify({'error': 'S3 client not initialized. Check server logs.'}), 500
+
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file in the request'}), 400
+    
+    audio_file = request.files['audio']
+    timestamp = request.form.get('timestamp', '')
+    
+    if audio_file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    if audio_file:
+        # Create a unique filename using timestamp
+        filename = f"response_{timestamp}.webm"
+        s3_object_name = os.path.join(S3_AUDIO_PREFIX, filename)
+
+        try:
+            # Upload the file to S3
+            s3_client.upload_fileobj(
+                audio_file,
+                S3_BUCKET_NAME,
+                s3_object_name,
+                ExtraArgs={'ContentType': 'audio/webm'}
+            )
+            
+            return jsonify({
+                'message': f"Audio response uploaded successfully.",
+                'filename': filename,
+                's3_key': s3_object_name
+            }), 200
+
+        except NoCredentialsError:
+            print("AWS credentials not found.")
+            return jsonify({'error': 'AWS credentials not found. Configure your environment.'}), 500
+        except PartialCredentialsError:
+            print("Incomplete AWS credentials.")
+            return jsonify({'error': 'Incomplete AWS credentials. Configure your environment.'}), 500
+        except ClientError as e:
+            print(f"S3 Client Error: {e.response['Error']['Message']}")
+            return jsonify({'error': f"S3 Client Error: {e.response['Error']['Message']}"}), 500
+        except Exception as e:
+            print(f"An unexpected error occurred: {str(e)}")
+            return jsonify({'error': f"An unexpected error occurred: {str(e)}"}), 500
+    
+    return jsonify({'error': 'Audio upload failed for an unknown reason.'}), 500
 
 if __name__ == '__main__':
     # For local development, ensure AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
