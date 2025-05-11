@@ -306,8 +306,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (response.ok) {
                 console.log('Audio uploaded successfully:', result);
-                // Add user message to chat
-                addUserMessage("I have experience with various AWS services including EC2, S3, Lambda, and API Gateway. I've deployed serverless applications using AWS SAM and worked with DynamoDB for NoSQL data storage.");
+                
+                // Add user message to chat with the transcribed text
+                if (result.transcript) {
+                    addUserMessage(result.transcript);
+                } else {
+                    addUserMessage("I have experience with various AWS services including EC2, S3, Lambda, and API Gateway. I've deployed serverless applications using AWS SAM and worked with DynamoDB for NoSQL data storage.");
+                }
                 
                 // After a delay, simulate interviewer response
                 setTimeout(() => {

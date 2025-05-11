@@ -3,6 +3,61 @@ from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
 import pyaudio
+import boto3
+import os
+import json
+import time
+import requests
+
+# Initialize AWS clients
+s3_client = boto3.client('s3')
+transcribe_client = boto3.client('transcribe')
+
+def transcribe_audio_file(s3_bucket, s3_key):
+    """
+    Transcribe an audio file from S3 using Amazon Transcribe
+    """
+    try:
+        # Start transcription job
+        job_name = f"transcription-{os.path.basename(s3_key)}"
+        
+        response = transcribe_client.start_transcription_job(
+            TranscriptionJobName=job_name,
+            Media={'MediaFileUri': f's3://{s3_bucket}/{s3_key}'},
+            MediaFormat='webm',
+            LanguageCode='en-US'
+        )
+        
+        # Wait for transcription to complete
+        while True:
+            status = transcribe_client.get_transcription_job(
+                TranscriptionJobName=job_name
+            )
+            if status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
+                break
+            time.sleep(5)
+        
+        if status['TranscriptionJob']['TranscriptionJobStatus'] == 'COMPLETED':
+            # Get the transcript
+            transcript_uri = status['TranscriptionJob']['Transcript']['TranscriptFileUri']
+            transcript_response = requests.get(transcript_uri)
+            transcript_data = transcript_response.json()
+            
+            # Extract the transcript text
+            transcript_text = transcript_data['results']['transcripts'][0]['transcript']
+            
+            # Delete the transcription job
+            transcribe_client.delete_transcription_job(
+                TranscriptionJobName=job_name
+            )
+            
+            return transcript_text
+        else:
+            raise Exception(f"Transcription failed: {status['TranscriptionJob']['FailureReason']}")
+            
+    except Exception as e:
+        print(f"Error in transcription: {str(e)}")
+        return None
 
 # ===================== Event Handler =====================
 class MyEventHandler(TranscriptResultStreamHandler):

@@ -3,6 +3,7 @@ import os
 import boto3 # Added boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError # For S3 error handling
 from werkzeug.utils import secure_filename # For securing filenames
+from transcribe import transcribe_audio_file # Import transcription function
 
 app = Flask(__name__,
             static_folder='static',
@@ -133,11 +134,22 @@ def upload_audio_to_s3():
                 ExtraArgs={'ContentType': 'audio/webm'}
             )
             
-            return jsonify({
-                'message': f"Audio response uploaded successfully.",
-                'filename': filename,
-                's3_key': s3_object_name
-            }), 200
+            # Transcribe the audio file
+            transcript = transcribe_audio_file(S3_BUCKET_NAME, s3_object_name)
+            
+            if transcript:
+                return jsonify({
+                    'message': f"Audio response uploaded and transcribed successfully.",
+                    'filename': filename,
+                    's3_key': s3_object_name,
+                    'transcript': transcript
+                }), 200
+            else:
+                return jsonify({
+                    'message': f"Audio response uploaded but transcription failed.",
+                    'filename': filename,
+                    's3_key': s3_object_name
+                }), 200
 
         except NoCredentialsError:
             print("AWS credentials not found.")
